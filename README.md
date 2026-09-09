@@ -280,9 +280,15 @@ Leave the window open while a search runs; closing it stops the worker. An
 unfinished job returns to the queue once its heartbeat goes stale and is picked
 up on the next start, so nothing is lost.
 
-This needs Python 3.10 or newer on PATH and no cloud host at all: the only
-contract between the web app and the worker is a row in `scraping_jobs`, so the
-worker only needs outbound internet access.
+This needs **Python 3.10–3.13** on PATH. Not 3.14: the pinned
+`pydantic-core` and `greenlet` publish wheels up to cp313 only, so pip falls
+back to compiling them and fails on a missing Rust toolchain and MSVC linker.
+The script checks both ends of the range and rebuilds `worker/.venv` if it was
+created by an interpreter outside it.
+
+No cloud host is needed at all: the only contract between the web app and the
+worker is a row in `scraping_jobs`, so the worker only needs outbound internet
+access.
 
 ### With Docker (recommended)
 
@@ -293,6 +299,8 @@ docker compose up --build
 ```
 
 ### Without Docker
+
+Python 3.10–3.13; see the note above about 3.14.
 
 ```bash
 cd worker
