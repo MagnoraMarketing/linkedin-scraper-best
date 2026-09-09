@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Alert } from '@/components/ui';
 import { REQUIRED_SUPABASE_ENV, missingSupabaseEnv, type RequiredSupabaseEnv } from '@/lib/env';
 
@@ -29,27 +30,39 @@ const WHERE_TO_FIND: Record<RequiredSupabaseEnv, string> = {
 export default function SetupPage() {
   const missing = missingSupabaseEnv();
   const missingSet = new Set<string>(missing);
+  const configured = missing.length === 0;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="text-lg font-semibold text-slate-900">Setup required</h1>
+      <h1 className="text-lg font-semibold text-slate-900">
+        {configured ? 'Setup complete' : 'Setup required'}
+      </h1>
       <p className="mt-2 text-sm text-slate-600">
-        The app is deployed but not yet connected to a Supabase project.
+        {configured
+          ? 'This deployment is connected to a Supabase project.'
+          : 'The app is deployed but not yet connected to a Supabase project.'}
       </p>
 
       <div className="mt-6 space-y-4">
-        <Alert
-          tone="warning"
-          title={
-            missing.length === 1
-              ? '1 environment variable is missing'
-              : `${missing.length} environment variables are missing`
-          }
-        >
-          Add them on your Vercel project under Settings → Environment Variables, for the
-          Production environment, then redeploy. Vercel only picks up new variables on the next
-          build — saving them is not enough on its own.
-        </Alert>
+        {configured ? (
+          <Alert tone="success" title="All environment variables are set">
+            Nothing to do here. <Link href="/login">Go to the sign-in page</Link> — if the app still
+            reports a database error, the migrations below have not been run yet.
+          </Alert>
+        ) : (
+          <Alert
+            tone="warning"
+            title={
+              missing.length === 1
+                ? '1 environment variable is missing'
+                : `${missing.length} environment variables are missing`
+            }
+          >
+            Add them on your Vercel project under Settings → Environment Variables, for the
+            Production environment, then redeploy. Vercel only picks up new variables on the next
+            build — saving them is not enough on its own.
+          </Alert>
+        )}
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-slate-900">Required variables</h2>
@@ -80,7 +93,9 @@ export default function SetupPage() {
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Then create the database tables</h2>
+          <h2 className="text-sm font-semibold text-slate-900">
+            {configured ? 'Create the database tables' : 'Then create the database tables'}
+          </h2>
           <p className="mt-2 text-sm text-slate-600">
             In the Supabase SQL editor, run the files in{' '}
             <code className="font-mono text-xs">supabase/migrations/</code> in numeric order, or run{' '}
@@ -91,10 +106,13 @@ export default function SetupPage() {
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Then create your account</h2>
+          <h2 className="text-sm font-semibold text-slate-900">
+            {configured ? 'Create your account' : 'Then create your account'}
+          </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Reload this page. Once the variables are set you will land on the sign-in screen, where
-            &ldquo;Create one&rdquo; registers the first account.
+            {configured
+              ? 'On the sign-in screen, "Create one" registers the first account.'
+              : 'Reload this page. Once the variables are set you will land on the sign-in screen, where "Create one" registers the first account.'}
           </p>
         </div>
       </div>
