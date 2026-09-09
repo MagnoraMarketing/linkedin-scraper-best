@@ -1,0 +1,7 @@
+{
+  "extends": ["next/core-web-vitals", "prettier"],
+  "ignorePatterns": ["node_modules", ".next", "worker"],
+  "rules": {
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
+  }
+}

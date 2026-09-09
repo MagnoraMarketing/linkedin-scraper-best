@@ -1,0 +1,38 @@
+# Fly.io deployment for the scraper worker.
+#
+# Deploy:
+#   fly launch --no-deploy --copy-config
+#   fly volumes create worker_session --size 1
+#   fly secrets set NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+#                   LINKEDIN_EMAIL=... LINKEDIN_PASSWORD=...
+#   fly deploy
+#
+# Secrets are set with `fly secrets`, never in this file.
+
+app = "linkedin-lead-worker"
+primary_region = "arn"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  SCRAPER_HEADLESS = "true"
+  SCRAPER_SESSION_DIR = "/data/session"
+  SCRAPER_MAX_CONCURRENCY = "1"
+  SCRAPER_DELAY_MS = "8000"
+  SCRAPER_TIMEOUT_MS = "30000"
+  SCRAPER_MAX_RETRIES = "3"
+  SCRAPER_POLL_INTERVAL_SECONDS = "10"
+
+[mounts]
+  source = "worker_session"
+  destination = "/data"
+
+# A worker, not a web service: no ports, and it must never scale to zero or a
+# running job would be abandoned mid-scrape.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[processes]
+  worker = "python -m linkedin_lead_worker.main"
