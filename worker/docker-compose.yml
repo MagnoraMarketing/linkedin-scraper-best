@@ -6,6 +6,13 @@ services:
   worker:
     build: .
     env_file: .env
+    # `environment` wins over `env_file`, which is the point: .env.example ships
+    # SCRAPER_SESSION_DIR=.session for the no-Docker path, and inheriting that
+    # here would write the session inside the container and leave the volume
+    # below unused — a fresh LinkedIn sign-in on every restart, which is exactly
+    # what the volume exists to prevent.
+    environment:
+      SCRAPER_SESSION_DIR: /data/session
     restart: unless-stopped
     volumes:
       # Persist the LinkedIn session so restarts do not force a fresh sign-in.

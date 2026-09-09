@@ -205,6 +205,19 @@ Nothing touches your Supabase project.
 
 ## 6. Local development
 
+### On Windows, by double-click
+
+Double-click `start-app.bat` in the repository root. It checks for Node 20+,
+installs the packages, writes a `.env.local` template for you to fill in on the
+first run, starts the dev server and opens the browser.
+
+The app is a web app either way — it runs a server on your machine and you view
+it in a browser at <http://localhost:3000>. There is no desktop executable. It
+reads the same Supabase project as the Vercel deployment, so accounts, leads
+and jobs are identical in both.
+
+### Any platform
+
 ```bash
 git clone https://github.com/MagnoraMarketing/linkedin-scraper-best.git
 cd linkedin-scraper-best
@@ -234,6 +247,23 @@ npm run format      # Prettier
 ---
 
 ## 7. Running the scraper worker
+
+### On Windows, without Docker (simplest)
+
+Double-click `worker/start-worker.bat`.
+
+It creates a virtual environment in `worker/.venv`, installs the dependencies
+and Chromium, and starts the worker. On the first run it writes a `worker/.env`
+template and opens it in Notepad — fill in the four values, save, and run the
+file again.
+
+Leave the window open while a search runs; closing it stops the worker. An
+unfinished job returns to the queue once its heartbeat goes stale and is picked
+up on the next start, so nothing is lost.
+
+This needs Python 3.10 or newer on PATH and no cloud host at all: the only
+contract between the web app and the worker is a row in `scraping_jobs`, so the
+worker only needs outbound internet access.
 
 ### With Docker (recommended)
 
@@ -336,6 +366,18 @@ fly secrets set \
   LINKEDIN_PASSWORD="..."
 fly deploy
 ```
+
+### Not Vercel
+
+`worker/vercel.json` sets `ignoreCommand` to `exit 0`, so any Vercel project
+pointed at this directory cancels its build instead of failing it. Vercel flags
+this repository as a monorepo and offers to add a project per subdirectory, and
+`worker/` looks like a standalone app to that heuristic — but it cannot build
+there for the reasons in §1, so every such project fails on every commit until
+it is deleted. The guard makes that harmless rather than noisy.
+
+The web app's own deployment is unaffected: `.vercelignore` excludes `/worker/`
+from it, so this file never reaches that build.
 
 ### Anything else
 
