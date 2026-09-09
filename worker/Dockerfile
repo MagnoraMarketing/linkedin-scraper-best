@@ -17,12 +17,16 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY linkedin_lead_worker ./linkedin_lead_worker
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # The LinkedIn session cache lives here. Mount a volume so a restart does not
 # force a fresh sign-in (which is what triggers verification challenges).
-RUN mkdir -p /data/session
+RUN mkdir -p /data/session && chown -R pwuser:pwuser /data
 
-# Run as the non-root user the base image provides.
-USER pwuser
-
+# The image deliberately stays root so the entrypoint can chown a mounted
+# volume, which arrives root-owned and masks the directory above. The
+# entrypoint drops to pwuser before exec'ing the command below, so the scrape
+# never runs as root — see entrypoint.sh.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["python", "-m", "linkedin_lead_worker.main"]
