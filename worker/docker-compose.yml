@@ -1,0 +1,17 @@
+# Local worker. Copy ../.env.example to ./.env and fill it in first.
+#
+# Start with:  docker compose up --build
+
+services:
+  worker:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      # Persist the LinkedIn session so restarts do not force a fresh sign-in.
+      - worker-session:/data/session
+    # Chromium needs more than Docker's default 64MB of shared memory.
+    shm_size: 1gb
+
+volumes:
+  worker-session:

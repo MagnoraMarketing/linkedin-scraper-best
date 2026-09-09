@@ -1,0 +1,9 @@
+# LinkedIn Lead Finder — scraper worker
+#
+# Install:  pip install -r requirements.txt
+# Then:     playwright install --with-deps chromium
+
+playwright==1.49.0
+beautifulsoup4==4.12.3
+httpx==0.27.2
+pydantic==2.9.2
