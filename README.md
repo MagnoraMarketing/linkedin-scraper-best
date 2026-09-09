@@ -235,6 +235,23 @@ npm run format      # Prettier
 
 ## 7. Running the scraper worker
 
+### On Windows, without Docker (simplest)
+
+Double-click `worker/start-worker.bat`.
+
+It creates a virtual environment in `worker/.venv`, installs the dependencies
+and Chromium, and starts the worker. On the first run it writes a `worker/.env`
+template and opens it in Notepad — fill in the four values, save, and run the
+file again.
+
+Leave the window open while a search runs; closing it stops the worker. An
+unfinished job returns to the queue once its heartbeat goes stale and is picked
+up on the next start, so nothing is lost.
+
+This needs Python 3.10 or newer on PATH and no cloud host at all: the only
+contract between the web app and the worker is a row in `scraping_jobs`, so the
+worker only needs outbound internet access.
+
 ### With Docker (recommended)
 
 ```bash
