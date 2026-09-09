@@ -67,8 +67,9 @@ jobs:
           sudo apt-get install -y postgresql postgresql-contrib
 
       - name: Apply migrations and run the schema test suite
-        run: |
-          # initdb refuses to run as root, so the suite runs as the postgres user.
-          sudo chmod -R a+rX "$GITHUB_WORKSPACE"
-          sudo -u postgres env PGBIN=/usr/lib/postgresql/16/bin PGPORT=5433 \
-            "$GITHUB_WORKSPACE/scripts/test-db.sh"
+        # Run as the runner user, not via sudo: initdb refuses to run as root,
+        # and the postgres user cannot traverse into the runner's home anyway.
+        env:
+          PGBIN: /usr/lib/postgresql/16/bin
+          PGPORT: '5433'
+        run: ./scripts/test-db.sh
