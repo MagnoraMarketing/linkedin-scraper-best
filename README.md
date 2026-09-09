@@ -166,6 +166,17 @@ Supabase SQL editor (Database → SQL Editor → New query, paste, Run):
 | `0003_job_queue.sql` | `claim_next_job`, `job_heartbeat`, `finish_job`, `upsert_lead` |
 | `0004_stats_and_rate_limit.sql` | `dashboard_stats`, the API rate-limit table and function |
 
+Or paste all four at once. `scripts/build-setup-sql.sh` concatenates them into
+a single `supabase-setup.sql` you can run in one go:
+
+```bash
+./scripts/build-setup-sql.sh
+```
+
+That file is generated rather than committed, so it cannot drift from the
+migrations it is built from. Run it once — it is not idempotent, and a second
+run will error on the `CREATE TYPE` and `CREATE TABLE` statements.
+
 Or with the Supabase CLI:
 
 ```bash
