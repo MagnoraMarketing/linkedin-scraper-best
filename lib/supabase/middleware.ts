@@ -10,6 +10,16 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
+ * API routes authenticate themselves and answer with a typed JSON error.
+ * Redirecting them to /login would hand a fetch client an HTML login page
+ * where it expects `{ ok: false, error: { code: 'unauthorized' } }`, so the
+ * middleware refreshes the session for them but never redirects them.
+ */
+function isApiPath(pathname: string): boolean {
+  return pathname.startsWith('/api/');
+}
+
+/**
  * Refreshes the auth session on every request and redirects unauthenticated
  * traffic to /login. Runs before any page or route handler, so a protected
  * route can never render for a signed-out visitor.
@@ -18,8 +28,21 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   // Without Supabase configured there is no session to refresh; send everyone
-  // to the setup page rather than throwing on every request.
+  // to the setup page rather than throwing on every request. API callers get a
+  // JSON error instead of an HTML redirect.
   if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
+    if (isApiPath(request.nextUrl.pathname)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: 'not_configured',
+            message: 'This deployment is not connected to a Supabase project yet.',
+          },
+        },
+        { status: 503 },
+      );
+    }
     if (request.nextUrl.pathname !== '/setup') {
       const url = request.nextUrl.clone();
       url.pathname = '/setup';
@@ -47,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && !isPublicPath(pathname)) {
+  if (!user && !isPublicPath(pathname) && !isApiPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
