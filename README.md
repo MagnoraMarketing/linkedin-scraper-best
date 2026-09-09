@@ -367,6 +367,18 @@ fly secrets set \
 fly deploy
 ```
 
+### Not Vercel
+
+`worker/vercel.json` sets `ignoreCommand` to `exit 0`, so any Vercel project
+pointed at this directory cancels its build instead of failing it. Vercel flags
+this repository as a monorepo and offers to add a project per subdirectory, and
+`worker/` looks like a standalone app to that heuristic — but it cannot build
+there for the reasons in §1, so every such project fails on every commit until
+it is deleted. The guard makes that harmless rather than noisy.
+
+The web app's own deployment is unaffected: `.vercelignore` excludes `/worker/`
+from it, so this file never reaches that build.
+
 ### Anything else
 
 Railway, a VPS with `docker compose`, or your own Kubernetes — the image is
