@@ -189,6 +189,25 @@ editor applies statements without tracking what has already run.
 `supabase/config.toml` is what makes both this and the Supabase GitHub
 integration work; the integration's checks are skipped when it is missing.
 
+### If you pasted the SQL and the GitHub integration now fails
+
+Pasting into the SQL editor creates the objects but records nothing in
+`supabase_migrations.schema_migrations` — that bookkeeping belongs to
+`supabase db push`. The Supabase GitHub integration therefore believes the
+database is empty, tries `0001_init.sql` on the next push to `main`, and fails:
+
+```
+ERROR: type "job_status" already exists (SQLSTATE 42710)
+```
+
+It fails that way on every push until the ledger is corrected. Paste
+`supabase/repair-migration-ledger.sql` into the SQL editor once. It records
+0001–0004 as applied and changes nothing in the `public` schema, so the
+integration skips those four files and applies only migrations added later.
+
+Check the tables really are there before running it — the file explains why and
+gives the query.
+
 ### Verifying the schema locally
 
 `scripts/test-db.sh` applies every migration to a throwaway PostgreSQL instance
