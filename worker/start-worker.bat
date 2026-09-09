@@ -35,7 +35,12 @@ if defined PY goto HAVE_PYTHON
 goto NO_PYTHON
 
 :HAVE_PYTHON
-%PY% -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
+REM Both ends matter. The pinned dependencies ship wheels for cp310-cp313 only;
+REM on 3.14 pip finds none, falls back to building pydantic-core and greenlet
+REM from source, and fails on a missing Rust toolchain and MSVC linker. Exit 2
+REM means too new, 1 means too old. errorlevel is a >= test, so check 2 first.
+%PY% -c "import sys; v=sys.version_info; raise SystemExit(0 if (3,10) <= v < (3,14) else (1 if v < (3,10) else 2))"
+if errorlevel 2 goto NEW_PYTHON
 if errorlevel 1 goto OLD_PYTHON
 
 REM --- Virtual environment ----------------------------------------------------
@@ -47,6 +52,18 @@ goto VENV_READY
 
 :VENV_READY
 set "VPY=.venv\Scripts\python.exe"
+
+REM The venv keeps whichever interpreter created it. Someone who hits the 3.14
+REM failure, installs 3.12 and runs this again would otherwise reuse the 3.14
+REM environment and fail identically, with nothing on screen to explain why.
+"%VPY%" -c "import sys; v=sys.version_info; raise SystemExit(0 if (3,10) <= v < (3,14) else 1)"
+if not errorlevel 1 goto DEPS
+echo  The existing worker\.venv was built by an unsupported Python. Rebuilding it ...
+rmdir /s /q .venv
+%PY% -m venv .venv
+if errorlevel 1 goto VENV_FAILED
+
+:DEPS
 
 REM --- Dependencies -----------------------------------------------------------
 REM pip is quick when everything is already satisfied, and running it every time
@@ -119,7 +136,20 @@ goto END
 echo  Your Python is too old. This worker needs 3.10 or newer.
 %PY% --version
 echo.
-echo  Install a current version from https://www.python.org/downloads/
+echo  Install 3.12 from https://www.python.org/downloads/
+goto END
+
+:NEW_PYTHON
+%PY% --version
+echo.
+echo  That Python is too new for this project's pinned dependencies.
+echo  pydantic-core and greenlet publish prebuilt wheels up to 3.13 only, so on
+echo  3.14 pip tries to compile them and fails on a missing Rust toolchain and
+echo  Visual Studio linker.
+echo.
+echo  Install Python 3.12 from https://www.python.org/downloads/ and tick
+echo  "Add python.exe to PATH". You do not have to uninstall the newer one -
+echo  this script rebuilds worker\.venv against whichever Python it finds.
 goto END
 
 :VENV_FAILED
