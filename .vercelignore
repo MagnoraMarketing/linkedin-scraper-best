@@ -1,3 +1,10 @@
-worker/
-supabase/
-__tests__/
+# Excluded from the Vercel build. Nothing here is used by the web app.
+#
+# Patterns are anchored with a leading slash on purpose: without it these match
+# at any depth, so a bare "supabase/" would also exclude lib/supabase/ and break
+# the build.
+
+/worker/
+/supabase/
+/__tests__/
+/scripts/
