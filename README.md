@@ -5,9 +5,6 @@ makers — CEO, CFO, Founder, Direktør, Ejer, Partner and so on — and collect
 results as deduplicated leads you can filter, edit, export to CSV and later push
 to a dialer.
 
-Built on [yagyeshVyas/linkedin-scraper](https://github.com/yagyeshVyas/linkedin-scraper):
-the profile-extraction and search logic is derived from that project, reworked
-into a web service.
 
 ---
 
