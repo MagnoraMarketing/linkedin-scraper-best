@@ -294,7 +294,34 @@ reads them.
 ## 9. Deploying the worker
 
 The worker needs a host that runs long-lived containers. The `Dockerfile` is
-portable; `fly.toml` is included as a worked example.
+portable; `render.yaml` and `fly.toml` are included as worked examples.
+
+### Render (blueprint included)
+
+`render.yaml` at the repository root describes the whole service, so there is
+nothing to configure by hand:
+
+1. Render dashboard → **New** → **Blueprint** → pick this repository.
+2. Render reads `render.yaml` and prompts for the four secrets it marks
+   `sync: false`: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `LINKEDIN_EMAIL`, `LINKEDIN_PASSWORD`. The first two are the same values the
+   Vercel project uses; the LinkedIn pair belongs only here.
+3. **Apply**. The first build takes a few minutes — the Playwright base image
+   carries Chromium.
+
+Two things about the blueprint are deliberate:
+
+- **`plan: standard`, not `starter`.** Chromium does not fit in the 512 MB
+  starter plan; it is killed mid-scrape by the OOM reaper. Standard is the
+  smallest plan above the 1 GB the `fly.toml` equivalent asks for. Background
+  workers have no free tier on Render.
+- **A 1 GB disk mounted at `/data`.** This persists the LinkedIn session across
+  restarts. Without it every restart signs in again, which is what provokes
+  LinkedIn's verification challenges.
+
+Confirm it is alive in **Logs**: `Worker starting`, then a `claim_next_job` poll
+every 10 seconds. A run started from `/search` in the web app should move from
+`queued` to `running` within one poll.
 
 ### Fly.io
 
@@ -312,11 +339,13 @@ fly deploy
 
 ### Anything else
 
-Railway, Render, a VPS with `docker compose`, or your own Kubernetes — the
-image is standard. Two requirements:
+Railway, a VPS with `docker compose`, or your own Kubernetes — the image is
+standard. Two requirements:
 
 - **A persistent volume at `SCRAPER_SESSION_DIR`.** Without it every restart
-  forces a fresh LinkedIn sign-in.
+  forces a fresh LinkedIn sign-in. Volumes are mounted root-owned on every host
+  worth naming, so the image starts as root, chowns the directory to `pwuser`
+  and drops privileges before the scrape begins — see `worker/entrypoint.sh`.
 - **Do not scale to zero.** A worker killed mid-job leaves it running until the
   heartbeat goes stale (5 minutes), after which it is re-claimed. That is safe,
   but it wastes time.

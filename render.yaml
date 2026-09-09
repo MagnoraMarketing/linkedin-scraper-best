@@ -1,0 +1,62 @@
+# Render Blueprint for the scraper worker.
+#
+# The Next.js app stays on Vercel; this file deploys only the worker, which
+# needs a long-lived container Vercel cannot provide (README §1). Render reads
+# this from the repository root, so it lives here rather than under worker/.
+#
+# Create it from the Render dashboard: New → Blueprint → pick this repository.
+# Render will prompt for the four secrets marked `sync: false` — they are never
+# committed.
+
+services:
+  - type: worker # A background worker: no port, no public URL, never sleeps.
+    name: linkedin-lead-worker
+    runtime: docker
+    dockerfilePath: ./worker/Dockerfile
+    dockerContext: ./worker
+    region: frankfurt # Closest to the Danish market this scrapes.
+
+    # Chromium plus a Node/Python process does not fit the 512 MB starter plan;
+    # it is killed mid-scrape by the OOM reaper. The fly.toml equivalent asks
+    # for 1 GB, and standard (2 GB) is the smallest Render plan above that.
+    plan: standard
+
+    autoDeploy: true
+
+    # Persists the LinkedIn session across restarts and redeploys. Without it
+    # every restart signs in again, which is what provokes LinkedIn's
+    # verification challenges. Render mounts this root-owned; entrypoint.sh
+    # hands it to pwuser before the worker starts.
+    disk:
+      name: worker-session
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      # --- Secrets. Entered in the Render dashboard, never committed. --------
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: LINKEDIN_EMAIL
+        sync: false
+      - key: LINKEDIN_PASSWORD
+        sync: false
+
+      # --- Rate limiting. Deliberately conservative; see worker/config.py. ---
+      - key: SCRAPER_HEADLESS
+        value: "true"
+      - key: SCRAPER_SESSION_DIR
+        value: /data/session
+      - key: SCRAPER_MAX_CONCURRENCY
+        value: "1"
+      - key: SCRAPER_DELAY_MS
+        value: "8000"
+      - key: SCRAPER_TIMEOUT_MS
+        value: "30000"
+      - key: SCRAPER_MAX_RETRIES
+        value: "3"
+      - key: SCRAPER_POLL_INTERVAL_SECONDS
+        value: "10"
+      - key: SCRAPER_WORKER_ID
+        value: render-worker-1
