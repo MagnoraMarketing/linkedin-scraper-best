@@ -205,6 +205,19 @@ Nothing touches your Supabase project.
 
 ## 6. Local development
 
+### On Windows, by double-click
+
+Double-click `start-app.bat` in the repository root. It checks for Node 20+,
+installs the packages, writes a `.env.local` template for you to fill in on the
+first run, starts the dev server and opens the browser.
+
+The app is a web app either way — it runs a server on your machine and you view
+it in a browser at <http://localhost:3000>. There is no desktop executable. It
+reads the same Supabase project as the Vercel deployment, so accounts, leads
+and jobs are identical in both.
+
+### Any platform
+
 ```bash
 git clone https://github.com/MagnoraMarketing/linkedin-scraper-best.git
 cd linkedin-scraper-best
