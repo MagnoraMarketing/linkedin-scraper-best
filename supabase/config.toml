@@ -1,0 +1,29 @@
+# Supabase project configuration.
+#
+# Deliberately minimal: every key the CLI supports has a documented default, and
+# listing 400 lines of defaults this project does not use would only obscure the
+# few settings that matter. Run `supabase init` in a scratch directory if you
+# want the fully commented reference file.
+#
+# This file is what lets the Supabase GitHub integration find the project — its
+# checks are skipped without it — and what `supabase link` / `supabase db push`
+# read when applying supabase/migrations/.
+
+project_id = "linkedin-lead-finder"
+
+[db]
+# Match the Postgres major version of the hosted project, so anything verified
+# locally behaves the same way there.
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[auth]
+enabled = true
+# Email + password only. The app has no OAuth flow.
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false

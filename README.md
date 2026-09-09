@@ -177,12 +177,20 @@ That file is generated rather than committed, so it cannot drift from the
 migrations it is built from. Run it once — it is not idempotent, and a second
 run will error on the `CREATE TYPE` and `CREATE TABLE` statements.
 
-Or with the Supabase CLI:
+Or with the Supabase CLI, which records each migration in
+`supabase_migrations.schema_migrations` so re-running is a safe no-op:
 
 ```bash
+supabase login
 supabase link --project-ref <your-ref>
 supabase db push
 ```
+
+This is the better route if you expect to change the schema later — the SQL
+editor applies statements without tracking what has already run.
+
+`supabase/config.toml` is what makes both this and the Supabase GitHub
+integration work; the integration's checks are skipped when it is missing.
 
 ### Verifying the schema locally
 
