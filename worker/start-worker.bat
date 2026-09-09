@@ -24,7 +24,20 @@ echo  ============================================
 echo.
 
 REM --- Find a Python interpreter ---------------------------------------------
+REM Ask for a supported version by name before falling back to whatever is
+REM default. `py -3` hands back the NEWEST installed Python, so on a machine
+REM carrying both 3.14 and 3.12 it returns 3.14 - and then telling the operator
+REM to install 3.12 is a dead end, because they already have it and the
+REM launcher still ignores it. The -3.x form asks for that exact version.
 set "PY="
+call :TRY_VERSION 3.13
+call :TRY_VERSION 3.12
+call :TRY_VERSION 3.11
+call :TRY_VERSION 3.10
+if defined PY goto HAVE_PYTHON
+
+REM No supported version is installed under the launcher. Fall back to the
+REM defaults so the range check below can name what is wrong.
 py -3 --version >nul 2>&1
 if not errorlevel 1 set "PY=py -3"
 if defined PY goto HAVE_PYTHON
@@ -33,6 +46,14 @@ python --version >nul 2>&1
 if not errorlevel 1 set "PY=python"
 if defined PY goto HAVE_PYTHON
 goto NO_PYTHON
+
+REM Sets PY to the first version that answers. Reached only by CALL; the jump
+REM above keeps execution from falling in here.
+:TRY_VERSION
+if defined PY goto :eof
+py -%1 --version >nul 2>&1
+if not errorlevel 1 set "PY=py -%1"
+goto :eof
 
 :HAVE_PYTHON
 REM Both ends matter. The pinned dependencies ship wheels for cp310-cp313 only;
@@ -148,8 +169,9 @@ echo  3.14 pip tries to compile them and fails on a missing Rust toolchain and
 echo  Visual Studio linker.
 echo.
 echo  Install Python 3.12 from https://www.python.org/downloads/ and tick
-echo  "Add python.exe to PATH". You do not have to uninstall the newer one -
-echo  this script rebuilds worker\.venv against whichever Python it finds.
+echo  "Add python.exe to PATH". You do not have to uninstall the newer one:
+echo  once 3.12 is present this script asks the launcher for it by name and
+echo  rebuilds worker\.venv against it.
 goto END
 
 :VENV_FAILED

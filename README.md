@@ -283,8 +283,12 @@ up on the next start, so nothing is lost.
 This needs **Python 3.10–3.13** on PATH. Not 3.14: the pinned
 `pydantic-core` and `greenlet` publish wheels up to cp313 only, so pip falls
 back to compiling them and fails on a missing Rust toolchain and MSVC linker.
-The script checks both ends of the range and rebuilds `worker/.venv` if it was
-created by an interpreter outside it.
+The script asks the Windows launcher for 3.13, 3.12, 3.11 and 3.10 by name,
+in that order, before falling back to the default. That matters because `py -3`
+returns the *newest* installed Python: on a machine carrying both 3.14 and 3.12
+it hands back 3.14, so simply installing a supported version would not be
+enough. It also rebuilds `worker/.venv` when the environment was created by an
+interpreter outside the range.
 
 No cloud host is needed at all: the only contract between the web app and the
 worker is a row in `scraping_jobs`, so the worker only needs outbound internet
