@@ -106,6 +106,7 @@ echo  No .env file found - creating one for you to fill in.
 echo.
 > .env echo # LinkedIn Lead Finder - worker configuration.
 >> .env echo # Fill in all four values below, save the file, then run start-worker.bat again.
+>> .env echo # Write them as NAME=value - no spaces around the = sign.
 >> .env echo # This file holds live credentials. Never commit or share it.
 >> .env echo.
 >> .env echo # Supabase - the same two values your Vercel project uses.
@@ -133,6 +134,18 @@ REM eol=# skips comments; tokens=1,* keeps any = inside a value intact.
 echo  [4/4] Loading configuration from .env ...
 for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do if not "%%A"=="" set "%%A=%%B"
 
+REM An .env that exists but was never filled in is the likeliest state here:
+REM the template ships every value empty, and `set "NAME="` leaves the variable
+REM undefined, so `if not defined` catches exactly that. Without this the
+REM worker starts, dies on its own validation, and the operator reads a failure
+REM under a banner that just told them the worker was running.
+set "ENV_MISSING="
+if not defined NEXT_PUBLIC_SUPABASE_URL set "ENV_MISSING=1"
+if not defined SUPABASE_SERVICE_ROLE_KEY set "ENV_MISSING=1"
+if not defined LINKEDIN_EMAIL set "ENV_MISSING=1"
+if not defined LINKEDIN_PASSWORD set "ENV_MISSING=1"
+if defined ENV_MISSING goto ENV_INCOMPLETE
+
 echo.
 echo  ------------------------------------------------------------
 echo   Worker running. Leave this window open.
@@ -146,6 +159,21 @@ echo  Worker stopped.
 goto END
 
 REM --- Failure paths ----------------------------------------------------------
+:ENV_INCOMPLETE
+echo.
+echo  worker\.env is missing one or more values. Fill in all four:
+echo.
+if not defined NEXT_PUBLIC_SUPABASE_URL   echo    NEXT_PUBLIC_SUPABASE_URL    Supabase - Project Settings, Data API, Project URL
+if not defined SUPABASE_SERVICE_ROLE_KEY  echo    SUPABASE_SERVICE_ROLE_KEY   Supabase - Project Settings, API Keys, service_role
+if not defined LINKEDIN_EMAIL             echo    LINKEDIN_EMAIL              the account the scraper signs in as
+if not defined LINKEDIN_PASSWORD          echo    LINKEDIN_PASSWORD
+echo.
+echo  Write them as NAME=value with no spaces around the = sign, save the file,
+echo  close Notepad, then run this script again.
+echo.
+notepad .env
+goto END
+
 :NO_PYTHON
 echo  Python was not found on this PC.
 echo.
