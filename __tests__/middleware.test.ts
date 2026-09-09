@@ -11,14 +11,25 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let currentUser: { id: string } | null = null;
-let envConfigured = true;
+
+/**
+ * Which of the required variables are absent. Modelled as a set rather than a
+ * boolean because the interesting case is a partial configuration: a
+ * deployment with the two browser variables set and the service role key
+ * missing looked healthy while the rate limiter failed open behind it.
+ */
+let missingEnv: string[] = [];
 
 vi.mock('@/lib/env', () => ({
   get publicEnv() {
-    return envConfigured
-      ? { supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'anon-key' }
-      : { supabaseUrl: '', supabaseAnonKey: '' };
+    return {
+      supabaseUrl: missingEnv.includes('NEXT_PUBLIC_SUPABASE_URL')
+        ? ''
+        : 'https://example.supabase.co',
+      supabaseAnonKey: missingEnv.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? '' : 'anon-key',
+    };
   },
+  isSupabaseConfigured: () => missingEnv.length === 0,
 }));
 
 vi.mock('@supabase/ssr', () => ({
@@ -37,7 +48,7 @@ function request(path: string) {
 
 beforeEach(() => {
   currentUser = null;
-  envConfigured = true;
+  missingEnv = [];
 });
 
 describe('unauthenticated API requests', () => {
@@ -97,7 +108,11 @@ describe('authenticated requests', () => {
 
 describe('when Supabase is not configured', () => {
   beforeEach(() => {
-    envConfigured = false;
+    missingEnv = [
+      'NEXT_PUBLIC_SUPABASE_URL',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+    ];
   });
 
   it('sends page requests to /setup instead of throwing', async () => {
@@ -119,5 +134,32 @@ describe('when Supabase is not configured', () => {
   it('does not redirect /setup to itself', async () => {
     const response = await updateSession(request('/setup'));
     expect(response.headers.get('location')).toBeNull();
+  });
+});
+
+describe('when only the service role key is missing', () => {
+  beforeEach(() => {
+    missingEnv = ['SUPABASE_SERVICE_ROLE_KEY'];
+    currentUser = { id: 'user-1' };
+  });
+
+  /**
+   * This is the case the old two-variable check waved through. The browser
+   * variables were present, so pages rendered and users signed in, while every
+   * `createAdminClient()` call threw and `checkRateLimit` swallowed it and
+   * returned true — the app ran with no rate limiting and said nothing.
+   */
+  it('sends page requests to /setup rather than serving a half-configured app', async () => {
+    const response = await updateSession(request('/search'));
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get('location') as string).pathname).toBe('/setup');
+  });
+
+  it('answers API requests with 503 not_configured', async () => {
+    const response = await updateSession(request('/api/leads'));
+    expect(response.status).toBe(503);
+
+    const body = await response.json();
+    expect(body.error.code).toBe('not_configured');
   });
 });

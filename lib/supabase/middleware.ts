@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
 import { NextResponse, type NextRequest } from 'next/server';
-import { publicEnv } from '@/lib/env';
+import { isSupabaseConfigured, publicEnv } from '@/lib/env';
 
 const PUBLIC_PATHS = ['/login', '/auth', '/setup'];
 
@@ -27,10 +27,15 @@ function isApiPath(pathname: string): boolean {
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // Without Supabase configured there is no session to refresh; send everyone
-  // to the setup page rather than throwing on every request. API callers get a
-  // JSON error instead of an HTML redirect.
-  if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
+  // Without Supabase fully configured there is no session to refresh; send
+  // everyone to the setup page rather than throwing on every request. API
+  // callers get a JSON error instead of an HTML redirect.
+  //
+  // This checks all three variables, not just the two the browser needs. A
+  // deployment missing only SUPABASE_SERVICE_ROLE_KEY used to sail past here
+  // and then fail open in the rate limiter, so the app ran unprotected with
+  // nothing on screen to say so.
+  if (!isSupabaseConfigured()) {
     if (isApiPath(request.nextUrl.pathname)) {
       return NextResponse.json(
         {
