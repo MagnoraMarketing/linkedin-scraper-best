@@ -165,31 +165,64 @@ class LinkedInScraper:
     async def _fresh_login(self) -> None:
         page = self._require_page()
 
+        # `commit` returns as soon as the response starts arriving, rather than
+        # waiting for a lifecycle event. The sign-in page carries enough
+        # third-party script that `domcontentloaded` can stay pending long after
+        # the form is on screen and usable — which produced a timeout while the
+        # operator was looking at a fully rendered page.
         try:
             await page.goto(
                 "https://www.linkedin.com/login",
-                wait_until="domcontentloaded",
+                wait_until="commit",
                 timeout=self._config.timeout_ms,
             )
-            await self._pause(1.5, 3)
+        except PlaywrightTimeoutError as exc:
+            raise ScraperStop(
+                JobErrorCode.TIMEOUT,
+                "Could not reach the LinkedIn sign-in page. The request never "
+                "returned a response.",
+            ) from exc
 
+        # Wait for the field itself. That is the condition the next step
+        # actually depends on, and it is true as soon as the form is usable.
+        try:
+            await page.wait_for_selector(
+                "#username", state="visible", timeout=self._config.timeout_ms
+            )
+        except PlaywrightTimeoutError as exc:
+            raise ScraperStop(
+                JobErrorCode.TIMEOUT,
+                "The LinkedIn sign-in form never appeared. LinkedIn most likely "
+                "served a block or challenge page instead of the sign-in form.",
+            ) from exc
+
+        await self._pause(1.5, 3)
+
+        try:
             await page.fill("#username", self._config.linkedin_email)
             await self._pause(0.4, 1.0)
             await page.fill("#password", self._config.linkedin_password)
             await self._pause(0.4, 1.0)
-            await page.click('button[type="submit"]')
-
-            try:
-                await page.wait_for_load_state("domcontentloaded", timeout=self._config.timeout_ms)
-            except PlaywrightTimeoutError:
-                pass
-            await self._pause(3, 5)
-
         except PlaywrightTimeoutError as exc:
             raise ScraperStop(
                 JobErrorCode.TIMEOUT,
-                "Timed out loading the LinkedIn sign-in page.",
+                "The LinkedIn sign-in fields were visible but could not be "
+                "filled in.",
             ) from exc
+
+        try:
+            await page.click('button[type="submit"]')
+        except PlaywrightTimeoutError as exc:
+            raise ScraperStop(
+                JobErrorCode.TIMEOUT,
+                "Timed out clicking the LinkedIn sign-in button.",
+            ) from exc
+
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=self._config.timeout_ms)
+        except PlaywrightTimeoutError:
+            pass
+        await self._pause(3, 5)
 
         if await self._is_logged_in():
             await self._save_session()
