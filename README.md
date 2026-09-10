@@ -354,10 +354,18 @@ reads them.
 
 ## 9. Deploying the worker
 
-The worker needs a host that runs long-lived containers. The `Dockerfile` is
-portable; `render.yaml` and `fly.toml` are included as worked examples.
+**This deployment runs the worker on a Windows PC — see §7.** That is the
+chosen setup, not a fallback. The only contract between the web app and the
+worker is a row in `scraping_jobs`, so the worker needs outbound internet
+access and nothing more; nothing has to reach it from outside, and it costs
+nothing to run. See `CLAUDE.md` for why.
 
-### Render (blueprint included)
+The rest of this section covers container hosts, kept as worked examples in
+case the worker ever has to run unattended. **`render.yaml` and `fly.toml` are
+not in use here.** A host that runs long-lived containers is required; the
+`Dockerfile` is portable.
+
+### Render (blueprint included — not used here)
 
 `render.yaml` at the repository root describes the whole service, so there is
 nothing to configure by hand:
@@ -525,6 +533,10 @@ the text fallback works before an id is found (for example Copenhagen matches
 
 ## 13. Connecting a dialer
 
+> **Not in use in this deployment.** Leads leave the system as CSV. This
+> section describes how a dialer *could* be wired up; it is not outstanding
+> work. See `CLAUDE.md`.
+
 `POST /api/leads/export-to-dialer` is implemented and authenticated, but no
 dialer ships with the app — inventing an API for a system that already exists
 would only produce code to throw away. Until one is connected the endpoint
@@ -558,6 +570,9 @@ Nothing else changes.
 ---
 
 ## 14. Enrichment
+
+> **Not in use in this deployment.** No enrichment vendor is connected, and
+> none is planned. See `CLAUDE.md`.
 
 `email`, `phone` and `mobile_phone` are `null` unless LinkedIn actually
 published them. **The scraper never invents contact data** — it does not build
